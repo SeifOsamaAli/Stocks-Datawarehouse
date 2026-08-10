@@ -27,14 +27,14 @@ for file in json_files:
             close_price = elements["4. close"]
             volume = elements["5. volume"]
 
-            cursor.execute("SELECT ticker, date FROM bronze_stocks_price WHERE ticker = ? AND date = ?", (ticker, date))
+            cursor.execute("SELECT ticker, date FROM Bronze.stocks_prices WHERE ticker = ? AND date = ?", (ticker, date))
             exisiting_row = cursor.fetchone()
 
             if exisiting_row == None:
-                cursor.execute("INSERT INTO bronze_stocks_price (ticker, date, open_price, high_price, low_price, close_price, volume) VALUES (?, ?, ?, ?, ?, ?, ?)", (ticker, date, open_price, high_price, low_price, close_price, volume))
+                cursor.execute("INSERT INTO Bronze.stocks_prices (ticker, date, open_price, high_price, low_price, close_price, volume) VALUES (?, ?, ?, ?, ?, ?, ?)", (ticker, date, open_price, high_price, low_price, close_price, volume))
 
             else:
-                cursor.execute("UPDATE bronze_stocks_price SET open_price = ?, high_price = ?, low_price = ?, close_price = ?, volume =? WHERE ticker = ? AND date = ?", (open_price, high_price, low_price, close_price, volume, ticker, date))
+                cursor.execute("UPDATE Bronze.stocks_prices SET open_price = ?, high_price = ?, low_price = ?, close_price = ?, volume =? WHERE ticker = ? AND date = ?", (open_price, high_price, low_price, close_price, volume, ticker, date))
 
 bronze_connection.commit()
 bronze_connection.close()
