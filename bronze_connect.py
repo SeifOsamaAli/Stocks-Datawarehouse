@@ -82,6 +82,6 @@ if len(went_wrong_json) >= 1:
 
 if len(went_wrong_json) != 0:
     for file in went_wrong_json:
-        logger.error(f"There Were A Problem While Tryinging Inserting {file}")
+        logger.error(f"There Were A Problem While Trying Inserting {file}")
 
 bronze_connection.close()
