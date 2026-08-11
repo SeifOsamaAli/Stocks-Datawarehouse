@@ -34,7 +34,7 @@ from datetime import datetime
 now = datetime.now()
 timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
 logger = logging.getLogger(__name__)
-file_handler = logging.FileHandler(f'Logs/bronze_inserting_data_{timestamp}.log')
+file_handler = logging.FileHandler(f'Logs/bronze_inserting_{timestamp}.log')
 
 logger.addHandler(file_handler)
 formatter = logging.Formatter(
