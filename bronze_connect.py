@@ -1,27 +1,32 @@
 """
-    Bronze Layer - Load JSON Into SQL Server (bronze_connection.py)
+Bronze Layer - Load JSON Into SQL Server (bronze_connection.py)
 
-    Loads the raw JSON files produced by api.py (staged in the Dataset folder)
-    into the Bronze.stocks_prices table in SQL Server.
+Loads the raw JSON files produced by api.py (staged in the Dataset folder)
+into the Bronze.stocks_prices table in SQL Server.
 
-    For every ticker/date combination found in the JSON files, checks whether a
-    matching row already exists (by primary key: ticker + date):
-        - If it doesn't exist yet, the row is inserted.
-        - If it already exists, the row is updated with the newer values (upsert).
+For every ticker/date combination found in the JSON files, checks whether a
+matching row already exists (by primary key: ticker + date):
+    - If it doesn't exist yet, the row is inserted.
+    - If it already exists, the row is updated with the newer values (upsert).
 
-    Each file's rows are committed as a single all-or-nothing unit. Once a file's
-    data is confirmed committed, its JSON file is deleted from Dataset, since it
-    has served its purpose and the data now lives safely in the database.
+Every insert or update also stamps the row's loaded_at column with the current
+timestamp (GETDATE()). This isn't used by this script itself — it exists so
+downstream stages (specifically Silver.load_silver) can filter Bronze down to
+only recently changed rows instead of rescanning the entire table on every run.
 
-    If a file fails partway through (e.g. connection drop, bad data), its changes
-    are rolled back, the JSON file is kept, and the filename is added to a retry
-    list. After the first pass over all files, any failures are retried up to
-    max_retries times using the same loading function. Files still failing after
-    that are logged as needing manual review rather than retried indefinitely.
+Each file's rows are committed as a single all-or-nothing unit. Once a file's
+data is confirmed committed, its JSON file is deleted from Dataset, since it
+has served its purpose and the data now lives safely in the database.
 
-    All events (success, failure, retries) are logged to a timestamped file in
-    the Logs folder for auditing which files loaded successfully and which
-    didn't, and why.
+If a file fails partway through (e.g. connection drop, bad data), its changes
+are rolled back, the JSON file is kept, and the filename is added to a retry
+list. After the first pass over all files, any failures are retried up to
+max_retries times using the same loading function. Files still failing after
+that are logged as needing manual review rather than retried indefinitely.
+
+All events (success, failure, retries) are logged to a timestamped file in
+the Logs folder for auditing which files loaded successfully and which
+didn't, and why.
 """
 
 from db_connection import create_connection
@@ -34,7 +39,7 @@ from datetime import datetime
 now = datetime.now()
 timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
 logger = logging.getLogger(__name__)
-file_handler = logging.FileHandler(f'Logs/bronze_inserting_data_{timestamp}.log')
+file_handler = logging.FileHandler(f'Logs/bronze_inserting_{timestamp}.log')
 
 logger.addHandler(file_handler)
 formatter = logging.Formatter(
@@ -82,7 +87,7 @@ def bronze_inserting_data(files):
                         cursor.execute("INSERT INTO Bronze.stocks_prices (ticker, date, open_price, high_price, low_price, close_price, volume) VALUES (?, ?, ?, ?, ?, ?, ?)", (ticker, date, open_price, high_price, low_price, close_price, volume))
 
                     else:
-                        cursor.execute("UPDATE Bronze.stocks_prices SET open_price = ?, high_price = ?, low_price = ?, close_price = ?, volume =? WHERE ticker = ? AND date = ?", (open_price, high_price, low_price, close_price, volume, ticker, date))
+                        cursor.execute("UPDATE Bronze.stocks_prices SET open_price = ?, high_price = ?, low_price = ?, close_price = ?, volume =?, loaded_at = GETDATE() WHERE ticker = ? AND date = ?", (open_price, high_price, low_price, close_price, volume, ticker, date))
 
 
             # Commit Only After ALL Rows In This File Succeed (All-Or-Nothing), So A Failure
