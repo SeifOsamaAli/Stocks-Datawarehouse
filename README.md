@@ -12,6 +12,37 @@ Read this file for the big picture and the *why* behind design decisions. Each s
 | Silver | Cleaned, typed, validated data ready for real use | `Silver.stocks_prices`, `Silver.load_log` |
 | Gold | Not yet built | — |
 
+## Running the Pipeline (Manual Order)
+
+There is currently no single script or scheduler that runs the full pipeline
+end to end — Bronze and Silver are two independent stages, each self-contained
+(own connection, logging, commit, and cleanup), run manually in this order:
+
+1. **`api.py`** — pulls the latest daily prices for the 10 tracked tickers from
+   Alpha Vantage, stages them as JSON files in `Dataset/`.
+2. **`bronze_connect.py`** — loads those JSON files into `Bronze.stocks_prices`
+   (upsert), deletes each JSON file once its data is safely committed.
+3. **`run_silver_pipeline.py`** — runs `Silver.load_silver` (casts and merges
+   new/changed Bronze rows into `Silver.stocks_prices`, filtered incrementally
+   by `loaded_at`), then, only if that succeeds, runs
+   `Silver.check_data_quality` (hard-error and soft-flag checks) and logs the
+   results.
+
+**Why these aren't wired into one script yet:** `run_silver_pipeline.py` is
+intentionally self-contained rather than importing `bronze_connect.py`
+directly — `bronze_connect.py` executes real work (opening a DB connection,
+listing files, loading data) as top-level code the moment it's imported, not
+just when it's run directly, so importing it as a module would trigger a
+second, unwanted connection and a duplicate load as a side effect of the
+import itself. Real end-to-end wiring (Bronze → Silver, with proper
+dependency handling and partial-failure behavior) is deferred until
+orchestration (Airflow) is introduced — `run_silver_pipeline.py` is written so
+it can be called directly as an Airflow task, unmodified, once that happens.
+
+Logs for each stage:
+- Bronze: `Logs/bronze_{timestamp}.log`, `Logs/bronze_inserting_{timestamp}.log`
+- Silver: `Logs/Silver_Pipeline_Logs/SilverPipeline_{timestamp}.log`
+
 ## Pipeline Flow — Bronze
 
 ```

@@ -42,7 +42,7 @@ Usage Example:
 
 
 CREATE OR ALTER PROCEDURE Silver.load_silver AS 
-
+SET NOCOUNT ON;
 BEGIN
 
     -- Creating Variables
@@ -95,7 +95,7 @@ BEGIN
     FROM @Merge_results
     GROUP BY action_taken;
 
-    PRINT('=================================');
+  
 	PRINT('>> Load Duration: ' + CAST(DATEDIFF(second, @Start_load, @End_load) AS VARCHAR) + ' Seconds');
 	PRINT('=================================');
 
@@ -113,6 +113,7 @@ BEGIN
     PRINT('Error Number: ' + CAST(ERROR_NUMBER() AS VARCHAR));
     PRINT('Error State: ' + CAST(ERROR_STATE() AS VARCHAR));
     PRINT('=================================');
+    THROW;
 
     END CATCH
 

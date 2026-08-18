@@ -45,13 +45,12 @@ Usage Example:
 */
 
 CREATE OR ALTER PROCEDURE Silver.check_data_quality AS
-
-
+SET NOCOUNT ON;
 BEGIN
 
 	PRINT('===============================');
 	PRINT('Hard Error: Price Inversion');
-	SELECT COUNT(*)
+	SELECT COUNT(*) AS Count_Wrong_Price
 	FROM Silver.stocks_prices
 	WHERE high_price < low_price;
 
@@ -86,7 +85,7 @@ BEGIN
 
 	PRINT('===============================');
 	PRINT('Hard Error: Negative Value');
-	SELECT COUNT(*)
+	SELECT COUNT(*) AS Count_Negative_Rows
 	FROM #negative_rows;
 
 	SELECT *
@@ -115,7 +114,7 @@ BEGIN
 
 	PRINT('===============================');
 	PRINT('Soft Flag: Zero Value');
-	SELECT COUNT(*)
+	SELECT COUNT(*) AS Count_Zero_Rows
 	FROM #zero_rows;
 
 	SELECT *

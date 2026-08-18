@@ -11,6 +11,11 @@ Script Purpose:
 	Proper Types (DECIMAL(11,4) For Prices, INT For Volume, DATE For Date) So The Data Can Be
 	Used Directly In Aggregations, Comparisons, And Date Logic Without Relying On Implicit
 	Conversion At Query Time.
+
+	Unlike Bronze.stocks_prices, It Is Safe For This Script To Drop And Recreate The Table On
+	Every Rerun. Silver Holds No Data Of Its Own — Every Row Here Is Fully Derived From
+	Bronze.stocks_prices, So If This Table Is Ever Wiped, Running EXEC Silver.load_silver
+	Rebuilds It Completely From Bronze, With No Data Lost.
 */
 
 IF OBJECT_ID ('Silver.stocks_prices', 'U') IS NOT NULL

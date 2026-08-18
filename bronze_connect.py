@@ -49,7 +49,7 @@ formatter = logging.Formatter(
 file_handler.setFormatter(formatter)
 logger.setLevel(logging.INFO)
 
-# Connection & Dataabse
+# Connection & Database
 bronze_connection = create_connection()
 cursor = bronze_connection.cursor()
 
