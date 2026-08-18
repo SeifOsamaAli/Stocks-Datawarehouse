@@ -36,7 +36,7 @@ import os
 import pyodbc
 
 # Ensuring Local Directories Exists To Prevent FileNotFoundError.
-folder_name = r"G:\Seko\Seif\Data Engineering\Stocks Project\Logs\Silver_Pipeline_Logs"
+folder_name = r"G:\Seko\Seif\Data Engineering\Stocks Project\Logs\Silver_Pipeline"
 os.makedirs(folder_name, exist_ok=True)
 
 
