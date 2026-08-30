@@ -1,3 +1,63 @@
+"""
+    Gold Layer - Ticker Metadata Loader (ticker_information.py)
+
+    Fetches company-level metadata for each tracked ticker from Alpha
+    Vantage's OVERVIEW endpoint (one API call per ticker) and upserts it
+    into Gold.dim_ticker: ticker, company_name, sector, industry, exchange,
+    currency, country.
+
+    Uses a separate Alpha Vantage API key from api.py/bronze_connect.py
+    (ALPHA_VANTAGE_API_KEY_TICKER_INFO in .env, or similarly named), so this
+    script's calls don't compete with the daily price pull's 25-calls/day
+    quota.
+
+    Why This Script Skips JSON Staging (Unlike api.py/bronze_connect.py):
+        Bronze's two-step split (fetch -> JSON -> load) exists because a
+        single Bronze run processes up to ~1000 rows (10 tickers x ~100
+        days each), where atomicity and quota-safe retryability genuinely
+        matter. This script's unit of work is much smaller: one API call
+        returns exactly one row of data, upserted immediately, per ticker,
+        inside the same loop. If one ticker's call fails, the tickers
+        already processed are already safely committed -- no multi-row
+        atomicity concern to protect, and no meaningful quota cost to
+        re-fetch a single failed ticker later. JSON staging would add
+        structure this task doesn't need.
+
+    Success is detected by the presence of the "Name" key in the response
+    (the most fundamental, always-present field for a genuine company
+    lookup), mirroring api.py's use of "Time Series (Daily)" for the same
+    purpose on a different endpoint. "Error Message" and "Information"
+    (rate-limit) response shapes are handled with the same retry/
+    classification logic as api.py, since these are generic Alpha
+    Vantage-wide response shapes, not specific to one endpoint.
+
+    Upsert logic: checks for an existing row by ticker; inserts if new,
+    updates if it already exists. Chosen over insert-only because sector/
+    industry/exchange data, while rare, can change -- and the cost of
+    supporting an update path here is low.
+
+    Cadence: intended to be run rarely -- once per ticker, and again only
+    when a new ticker is added to the project or existing metadata needs
+    refreshing. Not part of the daily pipeline run.
+
+    Known Limitation:
+        Does not detect ticker renames. If a ticker's symbol changes, this
+        script will insert it as a brand-new row (new ticker_id) rather than
+        recognizing it as the same company, unless someone manually updates
+        the existing Gold.dim_ticker row's 'ticker' column instead. See
+        Gold.dim_ticker's DDL header for the same limitation from the
+        table's perspective.
+
+    Future Modification (not built):
+        If ticker discovery is ever automated (e.g. via yfinance), a
+        reconciliation/flagging step should be added here to distinguish a
+        genuinely new ticker from a renamed existing one, rather than
+        silently auto-inserting every unrecognized ticker as new.
+
+    Usage:
+        python ticker_information.py
+"""
+
 from dotenv import load_dotenv
 from db_connection import create_connection
 

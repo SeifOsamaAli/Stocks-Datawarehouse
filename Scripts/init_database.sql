@@ -38,3 +38,6 @@ GO
 
 CREATE SCHEMA Gold;
 GO
+
+CREATE SCHEMA Pipeline;
+GO

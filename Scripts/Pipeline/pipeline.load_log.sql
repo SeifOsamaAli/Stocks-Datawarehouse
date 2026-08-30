@@ -41,11 +41,11 @@ Script Purpose:
 */
 
 
-IF OBJECT_ID ('Silver.load_log', 'U') IS NULL
+IF OBJECT_ID ('Pipeline.load_log', 'U') IS NULL
 
 BEGIN
 
-	CREATE TABLE Silver.load_log(
+	CREATE TABLE Pipeline.load_log(
 		procedure_name VARCHAR(50),
 		last_run DATETIME2 DEFAULT GETDATE(),
 		PRIMARY KEY(procedure_name)
@@ -53,5 +53,8 @@ BEGIN
 END
 
 
-IF NOT EXISTS (SELECT 1 FROM Silver.load_log WHERE procedure_name = 'load_silver')
-INSERT INTO Silver.load_log (procedure_name, last_run) VALUES ('load_silver', '2000-01-01');
+IF NOT EXISTS (SELECT 1 FROM Pipeline.load_log WHERE procedure_name = 'load_silver')
+INSERT INTO Pipeline.load_log (procedure_name, last_run) VALUES ('load_silver', '2000-01-01');
+
+IF NOT EXISTS (SELECT 1 FROM Pipeline.load_log WHERE procedure_name = 'load_gold')
+INSERT INTO Pipeline.load_log (procedure_name, last_run) VALUES ('load_gold', '2000-01-01');

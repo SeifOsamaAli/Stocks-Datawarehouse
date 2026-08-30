@@ -19,8 +19,16 @@ Script Purpose:
 		  As Bronze Grows, Since Only New Or Recently Corrected Rows Are Considered.
 		- Uses MERGE To Insert New (Ticker, Date) Rows And Update Existing Ones,
 		  Based On That Filtered Set.
-		- Wrapped In TRY/CATCH: Any Failure Triggers A ROLLBACK And Prints
-		  Diagnostic Error Information (Error Message, Line, Severity).
+		- Stamps Its Own 'loaded_at' Column On Silver.stocks_prices (DEFAULT
+		  GETDATE() On Insert, Explicitly Set On Update) So Downstream Layers
+		  (Gold) Can Apply The Same Incremental-Filtering Pattern Against Silver
+		  That This Procedure Applies Against Bronze. Note: Since MERGE's
+		  WHEN MATCHED Fires For Every Existing (Ticker, Date) Row Regardless Of
+		  Whether Any Value Actually Changed, 'loaded_at' Refreshes On Every Row
+		  Touched By A Run, Not Only On Rows Whose Values Genuinely Changed.
+		- Wrapped In TRY/CATCH: Any Failure Triggers A ROLLBACK, Prints Diagnostic
+		  Error Information, And Re-Throws The Original Error (Via THROW) So Any
+		  Calling Code (E.g. Python/pyodbc) Can Actually Detect The Failure.
 		- Reports Load Results (Row Counts Per Action: INSERT / UPDATE) And
 		  Total Load Duration.
 		- On A Successful Run Only, Updates Silver.load_log's 'last_run' Timestamp
@@ -34,7 +42,6 @@ Dependencies:
 
 Parameters:
 	None.
-	This Stored Procedure Does Not Accept Any Parameters Or Return Any Values.
 
 Usage Example:
 	EXEC Silver.load_silver;
@@ -50,7 +57,7 @@ BEGIN
     DECLARE @Merge_results TABLE (action_taken VARCHAR(10)); 
     DECLARE @Last_run DATETIME2
 
-    SET @Last_run = (SELECT last_run FROM Silver.load_log WHERE procedure_name = 'load_silver');
+    SET @Last_run = (SELECT last_run FROM Pipeline.load_log WHERE procedure_name = 'load_silver');
 
 	BEGIN TRY
 
@@ -80,7 +87,8 @@ BEGIN
             target.high_price = source.high_price,
             target.low_price = source.low_price,
             target.close_price = source.close_price,
-            target.volume = source.volume
+            target.volume = source.volume,
+            target.loaded_at = GETDATE()
 
     WHEN NOT MATCHED THEN
         INSERT (ticker, date, open_price, high_price, low_price, close_price, volume)
@@ -99,7 +107,7 @@ BEGIN
 	PRINT('>> Load Duration: ' + CAST(DATEDIFF(second, @Start_load, @End_load) AS VARCHAR) + ' Seconds');
 	PRINT('=================================');
 
-    UPDATE Silver.load_log
+    UPDATE Pipeline.load_log
     SET last_run = @End_load
     WHERE procedure_name = 'load_silver';
 
