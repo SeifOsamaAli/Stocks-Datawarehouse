@@ -1,4 +1,8 @@
 import pyodbc
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def create_connection():
     """
@@ -15,9 +19,9 @@ def create_connection():
                 not running, driver not installed, or invalid server name).
 """
 
-    DRIVER = 'ODBC Driver 18 for SQL Server'
-    SERVER = r'localhost\SQLEXPRESS'
-    DATABASE = 'Stocks_Datawarehouse'
+    DRIVER = os.environ["DRIVER"]
+    SERVER = os.environ["SERVER"]
+    DATABASE = os.environ["DATABASE"]
     trusted_connection = 'yes'
     encrypt = 'yes;trustServerCertificate=yes'
     return pyodbc.connect(f'DRIVER={{{DRIVER}}};SERVER={SERVER};DATABASE={DATABASE};Trusted_Connection={trusted_connection};Encrypt={encrypt}')
